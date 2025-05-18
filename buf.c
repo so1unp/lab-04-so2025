@@ -9,7 +9,10 @@
 #include <pthread.h>
 #include <math.h>
 #include <semaphore.h>
-
+//gcc -o buf buf.c -pthread
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+sem_t espacio_vacio;
+sem_t espacio_lleno;
 static void* producer(void*);
 static void* consumer(void*);
 
@@ -31,11 +34,16 @@ static void* producer(void *p)
     int i = 0;
 
     struct params *params = (struct params*) p;
-
+    
     for (i = 0; i < params->items; i++) {
+        sem_wait(&espacio_vacio);
+        pthread_mutex_lock(&mutex);
+        printf("produciendo...");
         params->buf->buf[i % params->buf->size] = i;
+        pthread_mutex_unlock(&mutex);
         // Espera una cantidad aleatoria de microsegundos.
         usleep(rand() % params->wait_prod);
+        sem_post(&espacio_lleno);
     }
 
     pthread_exit(0);
@@ -52,9 +60,14 @@ static void* consumer(void *p)
     int *reader_results = (int*) malloc(sizeof(int)*params->items);
 
     for (i = 0; i < params->items; i++) {
+        sem_wait(&espacio_lleno);
+        pthread_mutex_lock(&mutex);
+        printf("consumiendo...");
         reader_results[i] = params->buf->buf[i % params->buf->size];
+        pthread_mutex_unlock(&mutex);
         // Espera una cantidad aleatoria de microsegundos.
         usleep(rand() % params->wait_cons);
+        sem_post(&espacio_vacio);
     }
 
     // Imprime lo que leyo
@@ -130,6 +143,10 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
+    pthread_mutex_init(&mutex, NULL);  // Inicializar
+    sem_init(&espacio_vacio, 0, buf->size);
+    sem_init(&espacio_lleno, 0, 0);
+
     // Inicializa semilla para números pseudo-aleatorios.
     srand(getpid());
 
@@ -137,6 +154,11 @@ int main(int argc, char** argv)
     pthread_create(&producer_t, NULL, producer, params);
     pthread_create(&consumer_t, NULL, consumer, params);
 
-    // Mi trabajo ya esta hecho ...
-    pthread_exit(NULL);
+    pthread_join(producer_t, NULL);
+    pthread_join(consumer_t, NULL);
+
+    pthread_mutex_destroy(&mutex);
+    sem_destroy(&espacio_vacio);
+    sem_destroy(&espacio_lleno);
+
 }

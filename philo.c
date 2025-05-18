@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <semaphore.h>
+//gcc -o philo philo.c -pthread
 
 // Mueve el cursor a la linea x, columna y (ver codigos ANSI).
 #define xy(x, y) printf("\033[%d;%dH", x, y)
@@ -27,7 +29,10 @@ int segs_piensa = 1;     // intervalo de pensamiento en [1, seg_piensa] segundos
 int segs_come = 1;
 
 // Mutex
+
 static pthread_mutex_t screen = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex[N] = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER,PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER};
+sem_t tenedores_disponibles;
 
 // Imprime en la posición (x,y) la cadena *fmt.
 void print(int y, int x, const char *fmt, ...)
@@ -44,6 +49,7 @@ void print(int y, int x, const char *fmt, ...)
 // El filosofo come.
 void eat(int id)
 {
+        sem_wait(&tenedores_disponibles);
     int f[2]; // tenedores 
     int ration, i; 
 
@@ -57,6 +63,9 @@ void eat(int id)
 
     // Toma los tenedores.
     for (i = 0; i < 2; i++) {
+        pthread_mutex_lock(&mutex[f[i]]);
+
+
         if (!i) {
             clear_eol(id);
 	    }
@@ -72,6 +81,11 @@ void eat(int id)
         print(id, 40 + i * 4, "ñam");
         sleep(1 + (rand() % segs_come));
     }
+    for (i = 0; i < 2; i++) {
+        pthread_mutex_unlock(&mutex[f[i]]);
+    }
+        sem_post(&tenedores_disponibles);
+
 }
 
 // El filosofo piensa.
@@ -85,7 +99,7 @@ void think(int id)
 
         // Piensa en algo...
         sprintf(buf, "..oO (%s)", topic[t = rand() % M]);
-
+        //sprintf(buf, "..oO (%s)", topic[t = 0]);// simulacion del abrazo mortal
         // Imprime lo que piensa.
         for (i = 0; buf[i]; i++) {
             print(id, i + 18, "%c", buf[i]);
@@ -133,12 +147,18 @@ int main(int argc, char* argv[])
     srand(getpid());
 
     clear(); 
+    for (int i = 0; i < N; i++)
+        pthread_mutex_init(&mutex[i], NULL);  
+    sem_init(&tenedores_disponibles, 0, N-1);
 
     for (i = 0; i < N; i++) {
         id[i] = i;
         pthread_create(tid + i, 0, filosofo, id + i);
     }
-
     pthread_exit(0);
+    for (int i = 0; i < N; i++)
+        pthread_mutex_destroy(&mutex[i]);
+    sem_destroy(&tenedores_disponibles);
+
 }
 

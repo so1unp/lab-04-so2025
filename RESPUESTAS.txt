@@ -1,0 +1,5 @@
+3.1. El programa philo.c presenta una condición de carrera porque varios filósofos (hilos) pueden intentar tomar los mismos tenedores al mismo tiempo sin ningún mecanismo de sincronización. 
+Esto puede llevar a que dos hilos accedan simultáneamente a un recurso compartido sin exclusión mutua, lo que en un sistema real produciría comportamientos inconsistentes o erróneos.
+3.3. La condicion para que no suceda abrazo mortal es que no coman todos al mismo tiempo.
+Descomentar la linea 102 y comentar la linea 101 asi de fuerza a al abrazo mortal.
+Lo solucione poniendo en el semaforo 4 tenedores disponibles, ya que tienen que ser par los tenedores disponibles para que coman todos.
