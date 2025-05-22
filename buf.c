@@ -17,13 +17,13 @@ static void* producer(void*);
 static void* consumer(void*);
 
 struct buffer {
-    int size;
+    unsigned int size;
     int* buf;
 };
 
 struct params {
-    int wait_prod;
-    int wait_cons;
+    unsigned int wait_prod;
+    unsigned int wait_cons;
     int items;
     struct buffer* buf;
 } params_t;
